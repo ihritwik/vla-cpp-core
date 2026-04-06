@@ -30,6 +30,12 @@ public:
     /// @return true if the write succeeded, false on I/O error.
     bool write(const RobotCommand& cmd);
 
+    /// @brief Serializes cmd to a JSON string without writing to disk.
+    ///        Used by the ROS2 node to publish over /robot/command.
+    /// @param cmd The RobotCommand to serialize.
+    /// @return JSON string in the same format as write().
+    std::string to_json_string(const RobotCommand& cmd);
+
 private:
     std::string output_path_;
 };

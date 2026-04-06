@@ -126,3 +126,34 @@ jobs:
         with:
           name: benchmark-results
           path: benchmarks/results/benchmark_results.txt
+
+  # ── Job 5: ROS2 Build (non-blocking) ─────────────────────────────────────
+  ros2-build:
+    name: ROS2 Build (non-blocking)
+    needs: build
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ROS2 Jazzy
+        run: |
+          sudo apt-get install -y software-properties-common curl
+          sudo curl -sSL \
+            https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+            -o /usr/share/keyrings/ros-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) \
+            signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] \
+            http://packages.ros.org/ros2/ubuntu noble main" | \
+            sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y ros-jazzy-desktop \
+            python3-colcon-common-extensions \
+            ros-jazzy-cv-bridge
+
+      - name: Build ROS2 node
+        run: |
+          source /opt/ros/jazzy/setup.bash
+          cd ros2_node
+          colcon build --packages-select vla_inference_node

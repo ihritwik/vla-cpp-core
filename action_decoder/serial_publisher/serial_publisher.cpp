@@ -33,3 +33,25 @@ bool SerialPublisher::write(const RobotCommand& cmd) {
     ofs << json.str();
     return ofs.good();
 }
+
+std::string SerialPublisher::to_json_string(const RobotCommand& cmd) {
+    using namespace std::chrono;
+    auto now_ms = duration_cast<milliseconds>(
+                      system_clock::now().time_since_epoch())
+                      .count();
+
+    std::ostringstream json;
+    json << "{\n";
+    json << "  \"timestamp_ms\": " << now_ms << ",\n";
+    json << "  \"joint_angles\": [";
+    for (int i = 0; i < 6; ++i) {
+        json << cmd.joint_angles[i];
+        if (i < 5) json << ", ";
+    }
+    json << "],\n";
+    json << "  \"gripper_state\": " << cmd.gripper_state << ",\n";
+    json << "  \"velocity_scale\": " << cmd.velocity_scale << "\n";
+    json << "}\n";
+
+    return json.str();
+}

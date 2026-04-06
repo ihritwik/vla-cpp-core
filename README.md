@@ -96,6 +96,37 @@ cmake --build build --parallel 4
 
 ---
 
+## ROS2 Jazzy Node
+
+The `ros2_node/` package integrates the full Phase 1 pipeline into a ROS2 Jazzy node.
+
+```bash
+# Install ROS2 Jazzy + cv_bridge (Ubuntu 24.04)
+sudo apt-get install -y ros-jazzy-desktop python3-colcon-common-extensions ros-jazzy-cv-bridge
+
+# Build
+source /opt/ros/jazzy/setup.bash
+cd ros2_node
+colcon build --packages-select vla_inference_node
+
+# Run (stub mode — DummyEncoder)
+source install/setup.bash
+ros2 run vla_inference_node vla_node
+
+# Run with a real ONNX model
+ros2 run vla_inference_node vla_node \
+    --ros-args \
+    -p model_path:=/path/to/model.onnx \
+    -p action_mode:=continuous \
+    -p embedding_dim:=512
+```
+
+Topics: `/camera/image_raw` (sub) → `/robot/command` (pub, JSON string).
+
+See [ros2_node/README.md](ros2_node/README.md) for full documentation.
+
+---
+
 ## Running Tests
 
 ### Unit tests
@@ -170,7 +201,7 @@ With a real CLIP model the vision encoding stage will dominate
 - [ ] TensorRT EP backend (Jetson Orin)
 - [ ] QNN EP backend (Snapdragon 8 Elite)
 - [ ] CAN bus publisher
-- [ ] ROS2 Jazzy node (Ubuntu 24.04)
+- [x] ROS2 Jazzy node (Ubuntu 24.04)
 - [ ] INT8 / FP16 quantization support
 
 ---
