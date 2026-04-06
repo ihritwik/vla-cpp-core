@@ -1,0 +1,13 @@
+build/
+*.o
+*.a
+*.so
+*.d
+tests/vendor/catch2.hpp
+benchmarks/results/benchmark_results.txt
+/tmp/
+.vscode/
+.idea/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake

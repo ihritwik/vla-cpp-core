@@ -1,0 +1,3 @@
+# catch2.hpp is downloaded by CI and the Quick Start instructions.
+# Run: curl -L https://github.com/catchorg/Catch2/releases/download/v2.13.10/catch.hpp \
+#           -o tests/vendor/catch2.hpp

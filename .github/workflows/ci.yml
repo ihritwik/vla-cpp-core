@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Job 1: Build ─────────────────────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libopencv-dev \
+            curl
+
+      - name: Download Catch2
+        run: |
+          mkdir -p tests/vendor
+          curl -L \
+            https://github.com/catchorg/Catch2/releases/download/v2.13.10/catch.hpp \
+            -o tests/vendor/catch2.hpp
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -DBUILD_TESTS=ON \
+            -DBUILD_BENCHMARKS=ON \
+            -DONNX_STUB=ON \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel 4
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-binaries
+          path: build/
+          retention-days: 1
+
+  # ── Job 2: Unit Tests ─────────────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-binaries
+          path: build/
+
+      - name: Install runtime dependencies
+        run: sudo apt-get install -y libopencv-dev
+
+      - name: Set executable permissions
+        run: chmod -R +x build/tests/ || true
+
+      - name: Run unit tests
+        run: |
+          cd build
+          ctest --output-on-failure --verbose
+
+  # ── Job 3: Integration Test ───────────────────────────────────────────────────
+  integration-test:
+    name: Integration Test
+    needs: unit-tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-binaries
+          path: build/
+
+      - name: Install runtime dependencies
+        run: sudo apt-get install -y libopencv-dev
+
+      - name: Run integration test
+        run: |
+          chmod +x build/tests/integration/test_full_pipeline
+          ./build/tests/integration/test_full_pipeline
+
+  # ── Job 4: Benchmark (non-blocking) ──────────────────────────────────────────
+  benchmark:
+    name: Benchmark (non-blocking)
+    needs: build
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-binaries
+          path: build/
+
+      - name: Install runtime dependencies
+        run: sudo apt-get install -y libopencv-dev
+
+      - name: Run benchmarks
+        run: |
+          mkdir -p benchmarks/results
+          chmod +x build/benchmarks/benchmark_pipeline || true
+          ./build/benchmarks/benchmark_pipeline
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmarks/results/benchmark_results.txt
