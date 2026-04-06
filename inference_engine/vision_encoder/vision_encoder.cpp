@@ -5,13 +5,22 @@
 
 // ---- VisionEncoder ----------------------------------------------------------
 
+#ifdef ONNX_STUB
 VisionEncoder::VisionEncoder(const std::string& model_path)
     : inference_(std::make_unique<ONNXInference>(model_path)) {}
+#else
+VisionEncoder::VisionEncoder(const std::string& model_path)
+    : inference_(std::make_unique<ONNXInference>(model_path, EMBEDDING_DIM)) {}
+#endif
 
 VisionEncoder::~VisionEncoder() = default;
 
 std::vector<float> VisionEncoder::encode(const std::vector<float>& tensor) {
+#ifdef ONNX_STUB
     return inference_->run(tensor, EMBEDDING_DIM);
+#else
+    return inference_->run(tensor);
+#endif
 }
 
 // ---- DummyEncoder -----------------------------------------------------------

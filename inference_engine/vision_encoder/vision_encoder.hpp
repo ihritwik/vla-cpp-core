@@ -23,7 +23,8 @@ public:
     /// @return 512-dimensional embedding vector.
     std::vector<float> encode(const std::vector<float>& tensor);
 
-    static constexpr std::size_t EMBEDDING_DIM = 512;
+    /// CLIP ViT-B/32 pooler_output is 768-dimensional.
+    static constexpr std::size_t EMBEDDING_DIM = 768;
 
 private:
     std::unique_ptr<ONNXInference> inference_;

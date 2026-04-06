@@ -6,8 +6,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Stub mode: no real ONNX runtime required (matches Phase 1 build)
-add_compile_definitions(ONNX_STUB)
+# ── ONNX Runtime: auto-detect; fall back to stub if not found ────────────────
+find_library(ONNXRUNTIME_LIB
+    NAMES onnxruntime
+    PATHS /usr/local/lib)
+
+if(ONNXRUNTIME_LIB)
+    message(STATUS "[vla_inference_node] ONNX Runtime found: ${ONNXRUNTIME_LIB} — real inference enabled")
+else()
+    message(STATUS "[vla_inference_node] ONNX Runtime not found — stub mode active")
+    add_compile_definitions(ONNX_STUB)
+endif()
 
 # ── ROS2 / ament dependencies ─────────────────────────────────────────────────
 find_package(ament_cmake REQUIRED)
@@ -57,6 +66,11 @@ ament_target_dependencies(vla_node
 target_link_libraries(vla_node
     ${OpenCV_LIBS}
 )
+
+if(ONNXRUNTIME_LIB)
+    target_include_directories(vla_node PRIVATE /usr/local/include)
+    target_link_libraries(vla_node ${ONNXRUNTIME_LIB})
+endif()
 
 # ── Install ───────────────────────────────────────────────────────────────────
 install(TARGETS vla_node

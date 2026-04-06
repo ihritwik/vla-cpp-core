@@ -4,48 +4,80 @@
 #include <vector>
 
 // =============================================================================
-// STUB MODE — ONNX Runtime is not installed.
-//
-// This wrapper compiles cleanly with zero external dependencies and returns
-// correctly-shaped zero tensors from run().
-//
-// To swap in real ONNX Runtime:
-//  1. Download the ARM64 release from
-//     https://github.com/microsoft/onnxruntime/releases
-//  2. Extract and set ONNXRUNTIME_ROOT in CMakeLists.txt.
-//  3. Replace the stub implementation in onnx_inference.cpp with the
-//     Ort::Session / Ort::RunOptions API.
-//  4. Remove the ONNX_STUB compile definition from CMakeLists.txt.
+// Compile-time switch:
+//   ONNX_STUB defined  → zero-tensor stub, no external dependencies (CI mode)
+//   ONNX_STUB not defined → real ONNX Runtime C++ API (RPi / device build)
 // =============================================================================
+
+#ifndef ONNX_STUB
+#include <memory>
+#include <onnxruntime_cxx_api.h>
+#endif
 
 /// @brief Model-agnostic ONNX inference wrapper.
 ///
-/// In stub mode (ONNX_STUB defined) all methods return zero-filled tensors
-/// of the requested size without loading any model file.
+/// Stub mode (ONNX_STUB): returns zero-filled tensors of the requested size
+/// without loading any model file — no ONNX Runtime dependency required.
+///
+/// Real mode: loads the model with ORT CPU EP, 4 intra-op threads, and full
+/// graph optimization.  Input shape is fixed to [1, 3, 224, 224] (CLIP).
 class ONNXInference {
 public:
-    /// @brief Constructs the inference wrapper and (stub: logs) the model path.
-    /// @param model_path Path to the .onnx model file.
+
+#ifdef ONNX_STUB
+    // ── Stub API ──────────────────────────────────────────────────────────────
+
+    /// @brief Constructs the stub wrapper (model is not loaded).
+    /// @param model_path Logged but otherwise unused in stub mode.
     explicit ONNXInference(const std::string& model_path);
 
-    /// @brief Runs inference on the provided input tensor.
-    ///
-    /// Stub mode: returns std::vector<float>(output_size, 0.0f).
-    ///
-    /// @param input       Flat float input tensor.
-    /// @param output_size Expected number of output elements.
-    /// @return Flat float output tensor.
+    /// @brief Returns a zero-filled output tensor of the requested size.
+    /// @param input       Input tensor (ignored in stub mode).
+    /// @param output_size Number of float elements to return.
+    /// @return Zero-filled vector of length output_size.
     std::vector<float> run(const std::vector<float>& input,
                            std::size_t               output_size);
 
-    /// @brief Returns the first input node name (stub: "input").
-    /// @return Input tensor name.
-    std::string get_input_name() const;
+    /// @brief Returns the stub input name "input".
+    std::string get_input_name()  const;
 
-    /// @brief Returns the first output node name (stub: "output").
-    /// @return Output tensor name.
+    /// @brief Returns the stub output name "output".
     std::string get_output_name() const;
 
 private:
     std::string model_path_;
+
+#else
+    // ── Real ONNX Runtime API ─────────────────────────────────────────────────
+
+    /// @brief Loads the model and queries input/output tensor names.
+    /// @param model_path  Path to the .onnx file.
+    /// @param output_size Expected number of output elements (e.g. 768 for CLIP).
+    ONNXInference(const std::string& model_path, std::size_t output_size);
+
+    /// @brief Runs a forward pass through the loaded model.
+    /// @param input Flat float32 tensor matching input_shape_ (3*224*224 = 150528).
+    /// @return Flat float32 output vector of length output_size_.
+    std::vector<float> run(const std::vector<float>& input);
+
+    /// @brief Returns the first input node name as queried from the model.
+    std::string get_input_name()  const;
+
+    /// @brief Returns the first output node name as queried from the model.
+    std::string get_output_name() const;
+
+    /// @brief Returns the expected output tensor size baked into this instance.
+    std::size_t get_output_size() const;
+
+private:
+    Ort::Env                        env_;
+    Ort::SessionOptions             session_options_;
+    Ort::Session                    session_;
+    Ort::AllocatorWithDefaultOptions allocator_;
+
+    std::string              input_name_;
+    std::string              output_name_;
+    std::size_t              output_size_;
+    std::vector<int64_t>     input_shape_;   ///< [1, 3, 224, 224]
+#endif
 };
