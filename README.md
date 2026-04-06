@@ -189,4 +189,4 @@ integration test) before review.
 
 ## License
 
-MIT © 2024 Hritwik
+MIT
