@@ -13,9 +13,18 @@ option(BUILD_TESTS "Build test suite" ON)
 option(BUILD_BENCHMARKS "Build benchmarks" ON)
 option(BUILD_ROS2_NODE "Build ROS2 node" OFF)
 option(ONNX_STUB "Use stub ONNX mode" ON)
+option(ENABLE_ORT_PROFILING
+  "Write per-op Chrome-trace JSON via ORT built-in profiler (real mode only)" OFF)
 
 if(ONNX_STUB)
   add_compile_definitions(ONNX_STUB)
+endif()
+
+if(ENABLE_ORT_PROFILING AND NOT ONNX_STUB)
+  add_compile_definitions(ENABLE_ORT_PROFILING)
+  message(STATUS "ORT profiling enabled — trace written to ort_profile_*.json")
+elseif(ENABLE_ORT_PROFILING AND ONNX_STUB)
+  message(WARNING "ENABLE_ORT_PROFILING has no effect in stub mode (ONNX_STUB=ON)")
 endif()
 
 add_subdirectory(camera_pipeline)

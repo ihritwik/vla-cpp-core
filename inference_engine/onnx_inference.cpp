@@ -25,10 +25,18 @@ std::string ONNXInference::get_output_name() const { return "output"; }
 
 namespace {
 /// @brief Builds a SessionOptions with 4 intra-op threads and full graph opt.
+/// When ENABLE_ORT_PROFILING is defined, also activates the built-in profiler;
+/// trace is written to ort_profile_<timestamp>.json in the working directory
+/// and can be viewed at chrome://tracing.
 Ort::SessionOptions make_session_options() {
     Ort::SessionOptions opts;
     opts.SetIntraOpNumThreads(4);
     opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+#ifdef ENABLE_ORT_PROFILING
+    opts.EnableProfiling("ort_profile");
+    std::cerr << "[ONNXInference] ORT profiling enabled — "
+                 "trace: ort_profile_*.json (open in chrome://tracing)\n";
+#endif
     return opts;
 }
 } // namespace

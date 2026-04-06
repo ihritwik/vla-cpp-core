@@ -158,6 +158,63 @@ Expected output:
 
 ---
 
+## ORT Profiling
+
+Enable the ONNX Runtime built-in profiler to get a per-operator latency
+breakdown of the CLIP model — useful for identifying fusion opportunities
+before attempting TVM or INT8 quantization.
+
+> Requires a real build (`ONNX_STUB=OFF`). Has no effect in stub/CI mode.
+
+### Build with profiling on
+
+```bash
+cmake -B build \
+  -DONNX_STUB=OFF \
+  -DENABLE_ORT_PROFILING=ON \
+  -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel 4
+```
+
+### Run any binary that exercises the encoder
+
+```bash
+# Integration test (exercises encode() once)
+./build/tests/integration/test_full_pipeline
+
+# Or the benchmark (exercises it repeatedly — better trace)
+./build/benchmarks/benchmark_pipeline
+```
+
+On startup you will see:
+
+```
+[ONNXInference] ORT profiling enabled — trace: ort_profile_*.json (open in chrome://tracing)
+```
+
+### View the trace
+
+1. Open **Chrome** (or Chromium) and navigate to `chrome://tracing`
+2. Click **Load** and select the generated `ort_profile_<timestamp>.json`
+3. Zoom into the timeline — each row is an operator; width = latency
+
+Key things to look for:
+
+| What to look for | Meaning |
+|---|---|
+| Wide bars in `MatMul` / `Gemm` | Attention / projection layers dominating — candidate for INT8 |
+| Many narrow sequential ops | Fusion opportunity — TVM handles these well |
+| `Reshape` / `Transpose` overhead | Memory layout mismatches — often free after fusion |
+
+### CMake option reference
+
+| Option | Default | Description |
+|---|---|---|
+| `ONNX_STUB` | `ON` | Use zero-tensor stub — no ORT dependency (CI mode) |
+| `ENABLE_ORT_PROFILING` | `OFF` | Write per-op Chrome-trace JSON (real mode only) |
+
+---
+
 ## Running Benchmarks
 
 ```bash
