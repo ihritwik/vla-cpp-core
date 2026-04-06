@@ -1,6 +1,6 @@
 #include "vla_inference_node/vla_node.hpp"
 
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <opencv2/opencv.hpp>
 
 VlaInferenceNode::VlaInferenceNode(const rclcpp::NodeOptions& options)
